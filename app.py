@@ -41,7 +41,7 @@ if st.button("🚀 Generar reporte"):
         st.error("Falta OPENAI_API_KEY en Secrets de Streamlit")
         st.stop()
 
-    report = generate_report_with_gpt(metrics, api_key)
+  report = generate_report_with_gpt(metrics)
 
     st.subheader("🧾 Reporte generado")
     st.markdown(report)
