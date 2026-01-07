@@ -1,7 +1,7 @@
 from openai import OpenAI
 
 SYSTEM_PROMPT = """
-Eres un generador de reportes clínicos tipo MIRA.
+Eres un generador de reportes clínicos para Interlab IA.
 
 REGLAS:
 - Usa SOLO los datos presentes en el JSON.
