@@ -1,10 +1,15 @@
+import sys
 import os
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import tempfile
 import streamlit as st
 
 from engine.parse_pdf import read_pdf_text, extract_analytes_from_text
 from engine.scores import build_metrics
 from engine.report_llm import generate_report_with_gpt
+
 
 st.set_page_config(page_title="Interlab IA – Reporte tipo MIRA", layout="wide")
 st.title("🧠 Interlab IA – Reporte tipo MIRA")
