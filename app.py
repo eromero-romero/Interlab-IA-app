@@ -36,14 +36,5 @@ if st.button("🚀 Generar reporte"):
     st.subheader("🔎 Datos analizados (auditoría)")
     st.json(metrics)
 
-    api_key = st.secrets.get("OPENAI_API_KEY", "")
-    if not api_key:
-        st.error("Falta OPENAI_API_KEY en Secrets de Streamlit")
-        st.stop()
-
-  report = generate_report_with_gpt(metrics)
-
-    st.subheader("🧾 Reporte generado")
+    report = generate_report_with_gpt(metrics)
     st.markdown(report)
-
-    st.download_button("⬇️ Descargar reporte", data=report, file_name="reporte_interlab_ia.txt")
