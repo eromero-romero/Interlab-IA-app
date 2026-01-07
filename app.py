@@ -11,8 +11,9 @@ from engine.scores import build_metrics
 from engine.report_llm import generate_report_with_gpt
 
 
-st.set_page_config(page_title="Interlab IA – Reporte tipo MIRA", layout="wide")
-st.title("🧠 Interlab IA – Reporte tipo MIRA")
+st.set_page_config(page_title="Interlab IA – Reporte clínico", layout="wide")
+st.title("🧠 Interlab IA – Reporte clínico")
+st.caption("Reporte automatizado basado en resultados de laboratorio. No reemplaza la valoración médica.")
 
 pdf = st.file_uploader("📄 Subir PDF de laboratorio", type=["pdf"])
 raw_text = ""
