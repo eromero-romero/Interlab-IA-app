@@ -11,11 +11,25 @@ REGLAS:
 - Estilo: claro, estructurado, con semáforos 🟢🟡🔴.
 """
 
-def generate_report_with_gpt(metrics_json: dict, api_key: str, model: str = "gpt-4o-mini") -> str:
-    client = OpenAI(api_key=api_key)
+from openai import OpenAI
+
+SYSTEM_PROMPT = """
+Eres un generador de reportes clínicos para Interlab IA.
+
+REGLAS:
+- Usa SOLO los datos presentes en el JSON.
+- NO inventes analitos, valores, unidades ni diagnósticos.
+- Si falta información, indica N/E.
+- No reemplaza consulta médica; sugiere correlación clínica.
+- Estilo: claro, estructurado, con semáforos 🟢🟡🔴.
+"""
+
+def generate_report_with_gpt(metrics_json: dict, model: str = "gpt-4o-mini") -> str:
+    # La API Key la toma automáticamente de la variable de entorno OPENAI_API_KEY
+    client = OpenAI()
 
     user_prompt = f"""
-Genera un reporte estilo MIRA basado ÚNICAMENTE en este JSON:
+Genera un reporte estilo Interlab IA basado ÚNICAMENTE en este JSON:
 
 {metrics_json}
 
@@ -29,12 +43,12 @@ Secciones:
 7) FAQ (4 preguntas)
 """
 
-    response = client.responses.create(
+    resp = client.responses.create(
         model=model,
         input=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt}
+            {"role": "user", "content": user_prompt},
         ],
-        temperature=0.2
+        temperature=0.2,
     )
-    return response.output_text
+    return resp.output_text
