@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    @page { size: A4; margin: 18mm 14mm; }
+
+    body { font-family: Arial, sans-serif; color:#121212; }
+    .header { background:#8b1d3d; color:#fff; padding:16px 18px; border-radius:14px; display:flex; justify-content:space-between; align-items:center; }
+    .brand { display:flex; gap:10px; align-items:center; }
+    .logo { width:34px; height:34px; border-radius:10px; background:#fff; color:#8b1d3d; display:flex; align-items:center; justify-content:center; font-weight:800; }
+    .title { font-size:18px; font-weight:800; line-height:1.1; }
+    .subtitle { font-size:11px; opacity:0.9; margin-top:2px; }
+    .pill { background:#fff; color:#8b1d3d; padding:8px 12px; border-radius:999px; font-weight:800; font-size:11px; }
+
+    h2 { margin: 16px 0 10px; font-size:14px; color:#8b1d3d; }
+    .card { background:#fff; border:1px solid #e8e8e8; border-radius:14px; padding:12px 14px; margin-bottom:10px; }
+    .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    .metric { font-size:22px; font-weight:900; margin-top:4px; }
+    .small { font-size:11px; color:#6a6a6a; }
+    .badge { display:inline-block; padding:6px 10px; border-radius:999px; font-weight:800; font-size:11px; }
+    .ok { background:#eafff0; color:#116a2c; }
+    .warn { background:#fff6da; color:#8a5a00; }
+    .bad { background:#ffe3e3; color:#a40000; }
+
+    table { width:100%; border-collapse:collapse; }
+    th, td { border-bottom:1px solid #f0f0f0; padding:9px 8px; font-size:11px; vertical-align:top; }
+    th { color:#8b1d3d; text-transform:none; }
+
+    ul { margin: 8px 0 0 18px; }
+    li { margin: 6px 0; font-size:11px; }
+    p { font-size:11px; line-height:1.45; margin: 8px 0; }
+
+    .footer { margin-top:14px; font-size:10px; color:#8a8a8a; text-align:center; }
+    .muted { color:#7b7b7b; }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <div class="brand">
+      <div class="logo">IA</div>
+      <div>
+        <div class="title">Interlab IA</div>
+        <div class="subtitle">Reporte clínico generado con inteligencia artificial</div>
+      </div>
+    </div>
+    <div class="pill">Reporte clínico</div>
+  </div>
+
+  <h2>Datos del paciente</h2>
+  <div class="card">
+    <table>
+      <tr>
+        <th>Nombre</th><td>{{ name }}</td>
+        <th>Edad</th><td>{{ age }}</td>
+        <th>Sexo</th><td>{{ sex }}</td>
+      </tr>
+    </table>
+  </div>
+
+  <h2>Resumen ejecutivo de salud</h2>
+  <div class="grid3">
+    <div class="card">
+      <div class="small">Índice global</div>
+      <div class="metric">{{ global_score }}/100</div>
+      <div class="small">0–100, mayor es mejor</div>
+    </div>
+    <div class="card">
+      <div class="small">Inflamación sistémica</div>
+      <div class="metric">{{ inflam_score }}/100</div>
+      <div class="small">0–100, menor es mejor</div>
+    </div>
+    <div class="card">
+      <div class="small">Edad metabólica</div>
+      <div class="metric">{{ metabolic_age }} años</div>
+      <div class="small">Comparada con la edad real</div>
+    </div>
+  </div>
+
+  <h2>Índice de urgencia clínica</h2>
+  <div class="card">
+    <div class="badge {{ urgency_class }}">{{ urgency_code }} · {{ urgency_label }}</div>
+    <p class="muted">{{ urgency_text }}</p>
+  </div>
+
+  <h2>Risk score por sistema <span class="small">(mientras más bajo, mejor)</span></h2>
+  <div class="card">
+    <table>
+      <tr><th>Sistema</th><th>Score</th></tr>
+      {% for row in systems %}
+      <tr><td>{{ row.system }}</td><td>{{ row.score }}/100</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <h2>Interpretación general</h2>
+  <div class="card">
+    <p>{{ interpretation }}</p>
+  </div>
+
+  <h2>Próximos pasos sugeridos</h2>
+  <div class="card">
+    <ul>
+      {% for step in next_steps %}
+      <li>{{ step }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <h2>Preguntas frecuentes (FAQ)</h2>
+  <div class="card">
+    {% for qa in faqs %}
+      <p><b>¿{{ qa.q }}</b><br/>{{ qa.a }}</p>
+    {% endfor %}
+  </div>
+
+  <div class="footer">
+    Informe generado automáticamente por Interlab IA. No sustituye la valoración médica.
+  </div>
+</body>
+</html>
