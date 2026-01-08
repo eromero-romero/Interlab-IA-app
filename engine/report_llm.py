@@ -4,51 +4,41 @@ SYSTEM_PROMPT = """
 Eres un generador de reportes clínicos para Interlab IA.
 
 REGLAS:
-- Usa SOLO los datos presentes en el JSON.
+- Usa SOLO datos presentes en el JSON.
 - NO inventes analitos, valores, unidades ni diagnósticos.
-- Si falta información, indica N/E.
-- No reemplaza consulta médica; sugiere correlación clínica.
-- Estilo: claro, estructurado, con semáforos 🟢🟡🔴.
+- Si falta info, escribe N/E.
+- Da interpretación educativa (no diagnóstico).
+- Incluye semáforo 🟢🟡🔴 basado en flags ya calculados.
+- Finaliza con: 3-5 próximos pasos + 4-6 FAQ personalizadas.
 """
 
-from openai import OpenAI
+def generate_report_with_gpt(metrics_json: dict, api_key: str, model: str = "gpt-4o-mini") -> str:
+    if not api_key:
+        return "N/E: Falta OPENAI_API_KEY. Configura Secrets en Streamlit para habilitar IA."
 
-SYSTEM_PROMPT = """
-Eres un generador de reportes clínicos para Interlab IA.
-
-REGLAS:
-- Usa SOLO los datos presentes en el JSON.
-- NO inventes analitos, valores, unidades ni diagnósticos.
-- Si falta información, indica N/E.
-- No reemplaza consulta médica; sugiere correlación clínica.
-- Estilo: claro, estructurado, con semáforos 🟢🟡🔴.
-"""
-
-def generate_report_with_gpt(metrics_json: dict, model: str = "gpt-4o-mini") -> str:
-    # La API Key la toma automáticamente de la variable de entorno OPENAI_API_KEY
-    client = OpenAI()
+    client = OpenAI(api_key=api_key)
 
     user_prompt = f"""
-Genera un reporte estilo Interlab IA basado ÚNICAMENTE en este JSON:
+Genera un reporte clínico en español estilo Interlab IA, con secciones:
 
-{metrics_json}
-
-Secciones:
 1) Datos del paciente
 2) Índice de urgencia clínica (U0–U3) + explicación breve
 3) Resumen ejecutivo: índice global, inflamación, edad metabólica
-4) Risk score por sistema (si es N/E, explicarlo)
-5) Interpretación general (sin diagnosticar)
-6) Próximos pasos (3–5)
-7) FAQ (4 preguntas)
-"""
+4) Riesgo por sistema (si falta info, N/E)
+5) Hallazgos destacados con semáforos y valores
+6) Interpretación general (sin diagnosticar)
+7) Próximos pasos (3–5)
+8) FAQ (4–6)
 
-    resp = client.responses.create(
+JSON (usa SOLO esto):
+{metrics_json}
+"""
+    r = client.chat.completions.create(
         model=model,
-        input=[
+        temperature=0.3,
+        messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ],
-        temperature=0.2,
     )
-    return resp.output_text
+    return r.choices[0].message.content
