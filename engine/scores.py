@@ -1,69 +1,129 @@
-from typing import Dict, Optional
-from .parse_pdf import Obs
+from typing import Dict, Optional, Any, Tuple
+import math
 
-def cap01(x: float) -> float:
-    return max(0.0, min(1.0, x))
+def flag(value: Optional[float], low: Optional[float], high: Optional[float]) -> str:
+    """
+    Semáforo:
+    green = dentro
+    yellow = leve fuera
+    red = muy fuera
+    gray = N/E
+    """
+    if value is None:
+        return "gray"
+    if low is None and high is None:
+        return "gray"
+    if low is not None and value < low:
+        # qué tan lejos
+        dist = (low - value) / (abs(low) + 1e-9)
+        return "red" if dist > 0.15 else "yellow"
+    if high is not None and value > high:
+        dist = (value - high) / (abs(high) + 1e-9)
+        return "red" if dist > 0.15 else "yellow"
+    return "green"
 
-def pick(obs: Dict[str, Obs], k: str) -> Optional[float]:
-    o = obs.get(k)
-    return None if o is None else o.value
+def get(obs: Dict[str, Any], key_contains: str) -> Optional[float]:
+    key_contains = key_contains.lower()
+    for k, v in obs.items():
+        if key_contains in k.lower():
+            return getattr(v, "value", None)
+    return None
 
-def inflammation_index(obs: Dict[str, Obs]) -> Optional[int]:
-    crp = pick(obs, "crp_mg_l")
-    il6 = pick(obs, "il6_pg_ml")
-    esr = pick(obs, "esr_mm_h")
+def inflammation_index(obs: Dict[str, Any]) -> int:
+    """
+    0–100 (menor es mejor). Heurística:
+    - PCR (si existe)
+    - VSG / eritrosedimentación
+    - leucocitos
+    """
+    esr = get(obs, "eritrosed") or get(obs, "vsg")
+    crp = get(obs, "proteína c") or get(obs, "pcr")
+    wbc = get(obs, "leucoc")
 
-    if crp is None and il6 is None and esr is None:
-        return None
+    score = 0.0
+    if esr is not None:
+        score += min(60, esr)  # 0–60
+    if crp is not None:
+        score += min(40, crp * 5)  # PCR 0–8 -> 0–40 aprox
+    elif wbc is not None:
+        score += max(0, min(40, (wbc - 7) * 6))  # leucocitos altos suben
 
-    p = cap01((crp or 0.0) / 5.0)
-    i = cap01((il6 or 0.0) / 6.5)
-    e = cap01((esr or 0.0) / 30.0)
-
-    # MIRA-like: VSG pesa menos
-    score = round(100 * (0.45*p + 0.45*i + 0.10*e))
     return int(max(0, min(100, score)))
 
-def global_health_index(infl: Optional[int]) -> int:
-    infl = infl or 0
-    # Global simple por ahora (luego lo ampliamos)
-    return int(max(0, min(100, round(100 - 0.6*infl))))
+def global_health_index(infl: int, red_flags: int) -> int:
+    """
+    0–100 (más es mejor).
+    Penaliza inflamación y banderas rojas.
+    """
+    base = 90
+    base -= int(infl * 0.5)
+    base -= int(red_flags * 8)
+    return int(max(0, min(100, base)))
 
-def urgency_level(infl: Optional[int]) -> str:
-    s = infl or 0
-    if s >= 80:
-        return "U2 – consulta prioritaria"
-    if s >= 60:
-        return "U1 – consulta programable"
-    return "U0 – sin urgencia"
-
-def metabolic_age_conservative(age: Optional[float], infl: Optional[int]) -> Optional[int]:
+def metabolic_age(age: int, obs: Dict[str, Any]) -> int:
+    """
+    MIRA es propietario; aquí hacemos tu versión:
+    suma “años” según riesgo cardiometabólico/renal/inflamatorio.
+    Calibrable para que te dé ~42 en el caso LDL alto.
+    """
     if age is None:
         return None
-    # Conservador: igual a edad cronológica salvo inflamación muy alta
-    return int(round(age + (2 if (infl or 0) >= 80 else 0)))
 
-def build_metrics(obs: Dict[str, Obs]) -> dict:
-    age = pick(obs, "age")
-    sex = obs.get("sex").unit if obs.get("sex") else ""
+    years = 0.0
 
-    infl = inflammation_index(obs)
-    global_idx = global_health_index(infl)
-    urg = urgency_level(infl)
-    met_age = metabolic_age_conservative(age, infl)
+    ldl = get(obs, "l d l") or get(obs, "ldl")
+    tc  = get(obs, "colesterol sérico") or get(obs, "colesterol total")
+    hdl = get(obs, "h d l") or get(obs, "hdl")
+    a1c = get(obs, "hemoglobina glicosilada") or get(obs, "hba1c")
+    tg  = get(obs, "triglic")
+    egfr = get(obs, "tfg")  # si viene en el pdf
+    crp = get(obs, "pcr") or get(obs, "proteína c")
 
-    return {
-        "patient": {"age": age, "sex": sex},
-        "indices": {
-            "global_health": global_idx,
-            "inflammation": infl,
-            "metabolic_age": met_age
-        },
-        "system_scores": {
-            "cardiometabolic": "N/E",
-            "renal": "N/E",
-            "hepatic": "N/E",
-            "hematologic_inflammatory": "N/E"
-        },
-        "urgency": urg
-    }
+    # LDL: principal (para que 37 -> ~42 cuando LDL ~174)
+    if ldl is not None:
+        if ldl >= 190: years += 7
+        elif ldl >= 160: years += 5
+        elif ldl >= 130: years += 3
+        elif ldl >= 100: years += 1
+
+    # Colesterol total
+    if tc is not None:
+        if tc >= 240: years += 2
+        elif tc >= 200: years += 1
+
+    # HDL bajo
+    if hdl is not None:
+        if hdl < 40: years += 2
+        elif hdl < 50: years += 1
+
+    # HbA1c
+    if a1c is not None:
+        if a1c >= 6.5: years += 6
+        elif a1c >= 5.7: years += 3
+
+    # Triglicéridos
+    if tg is not None:
+        if tg >= 200: years += 2
+        elif tg >= 150: years += 1
+
+    # eGFR bajo
+    if egfr is not None:
+        if egfr < 60: years += 6
+        elif egfr < 90: years += 2
+
+    # PCR alta
+    if crp is not None:
+        if crp > 10: years += 3
+        elif crp > 3: years += 1
+
+    return int(round(age + years))
+
+def count_red_flags(obs: Dict[str, Any]) -> int:
+    reds = 0
+    for k, v in obs.items():
+        low = getattr(v, "ref_low", None)
+        high = getattr(v, "ref_high", None)
+        val = getattr(v, "value", None)
+        if flag(val, low, high) == "red":
+            reds += 1
+    return reds
