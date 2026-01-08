@@ -38,3 +38,55 @@ if st.button("🚀 Generar reporte"):
 
     report = generate_report_with_gpt(metrics)
     st.markdown(report)
+    from engine.pdf_html import render_pdf_from_template
+
+def urgency_badge(code: str):
+    code = (code or "U1").upper().strip()
+    if code == "U0":
+        return ("ok", "sin urgencia")
+    if code == "U1":
+        return ("warn", "consulta programable")
+    if code == "U2":
+        return ("warn", "consulta prioritaria")
+    return ("bad", "valoración urgente")
+
+# Contexto para plantilla
+u_code = metrics.get("urgency", {}).get("code", "U1")
+u_text = metrics.get("urgency", {}).get("text", "N/E")
+u_class, u_label = urgency_badge(u_code)
+
+context = {
+    "name": metrics.get("patient", {}).get("name", "N/E"),
+    "age": metrics.get("patient", {}).get("age", "N/E"),
+    "sex": metrics.get("patient", {}).get("sex", "N/E"),
+
+    "global_score": metrics.get("scores", {}).get("global", "N/E"),
+    "inflam_score": metrics.get("scores", {}).get("inflammation", "N/E"),
+    "metabolic_age": metrics.get("scores", {}).get("metabolic_age", "N/E"),
+
+    "urgency_code": u_code,
+    "urgency_label": u_label,
+    "urgency_class": u_class,
+    "urgency_text": u_text,
+
+    "systems": [
+        {"system": "Cardiometabólico", "score": metrics.get("scores", {}).get("cardio", "N/E")},
+        {"system": "Renal", "score": metrics.get("scores", {}).get("renal", "N/E")},
+        {"system": "Hepático", "score": metrics.get("scores", {}).get("hepatic", "N/E")},
+        {"system": "Hematológico e inflamatorio", "score": metrics.get("scores", {}).get("hemo_inflam", "N/E")},
+    ],
+
+    "interpretation": metrics.get("narrative", {}).get("interpretation", report),
+    "next_steps": metrics.get("narrative", {}).get("next_steps", []),
+    "faqs": metrics.get("narrative", {}).get("faqs", []),
+}
+
+pdf_bytes = render_pdf_from_template(context)
+
+st.download_button(
+    "⬇️ Descargar PDF (Interlab IA)",
+    data=pdf_bytes,
+    file_name="reporte_interlab_ia.pdf",
+    mime="application/pdf",
+)
+
